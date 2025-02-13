@@ -1,0 +1,278 @@
+/* styles.css */
+body {
+    font-family: 'Vazirmatn', sans-serif;
+    direction: rtl;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+.container {
+    width: 95%;
+    max-width: 1200px;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1, h2, h3 {
+    text-align: center;
+    color: #0056b3; /* Example primary color */
+}
+
+.search-form {
+    margin-bottom: 20px;
+}
+
+.search-box {
+    display: flex;
+    margin-bottom: 10px;
+}
+#seedKeyword{
+	font-family: "Vazir"
+}
+.search-box input[type="text"] {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px 0 0 4px;
+    text-align: right; /* For Persian text */
+}
+
+.search-box button.search-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px 0px 0px 4px;
+    cursor: pointer;
+}
+
+.collapsible {
+    background-color: #eee;
+    color: #444;
+    cursor: pointer;
+    padding: 10px;
+    width: 100%;
+    border: none;
+    text-align: right;
+    outline: none;
+    font-size: 16px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+
+.active, .collapsible:hover {
+    background-color: #ddd;
+}
+
+.collapse-content {
+    padding: 0 18px;
+    display: none;
+    overflow: hidden;
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+.collapse-content.show {
+    display: block; /* For JS toggle */
+}
+
+
+.options, .checkboxes, .textareas {
+    margin-bottom: 15px;
+}
+
+.options label, .checkboxes label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.options input[type="number"] {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 60px;
+}
+
+.checkboxes label {
+    margin-right: 15px;
+}
+
+.textareas textarea {
+	font-family: "Vazir";
+    width: 100%;
+    min-height: 150px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box; /* Important to include padding in width/height */
+    font-family: monospace; /* Optional: for better text alignment */
+    white-space: pre-wrap; /* Respect new lines */
+    direction: rtl; /* To prevent rtl for code-like text */
+    text-align: right; /* To prevent rtl for code-like text */
+}
+
+
+.options button {
+    background-color: #28a745; /* Example success color */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 0 5px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.options button:hover {
+    background-color: #218838;
+}
+
+.options button[onclick="resetJob()"] {
+    background-color: #dc3545; /* Example danger color for reset */
+}
+.options button[onclick="resetJob()"]:hover {
+    background-color: #c82333;
+}
+.options button[onclick="togglePause()"] {
+    background-color: #ffc107; /* Example warning color for pause/resume */
+    color: #333;
+}
+.options button[onclick="togglePause()"]:hover {
+    background-color: #e0a800;
+}
+.options button[onclick="downloadExcel()"] {
+    background-color: #17a2b8; /* Example info color for download */
+}
+.options button[onclick="downloadExcel()"]:hover {
+    background-color: #138496;
+}
+
+
+#keywordCount {
+    text-align: center;
+    display: block;
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+.tables {
+    display: flex;
+    flex-wrap: wrap; /* Allow tables to wrap on smaller screens */
+    justify-content: flex-start; /* Align tables from the start */
+	gap: 30px;
+}
+
+.table-container {
+    margin: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    overflow: hidden; /* To contain rounded borders */
+    width: width: calc(300% - 20px); /* Two tables per row minus margins */
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.05); /* Subtle shadow */
+    background-color: #fff; /* Table background */
+}
+
+.table-header {
+    background-color: #f0f0f0;
+    padding: 10px;
+    text-align: right;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.table-header h3 {
+    margin: 0;
+    font-size: 1.1em;
+    color: #555;
+}
+
+.table-header button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+.table-header button:hover {
+    background-color: #0056b3;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: right;
+}
+
+th {
+    background-color: #f7f7f7;
+    font-weight: bold;
+}
+
+tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+tbody tr:hover {
+    background-color: #f0f0f0;
+}
+
+td a {
+    margin-right: 5px;
+    text-decoration: none; /* Remove underline from links if needed */
+}
+td a img {
+    vertical-align: middle; /* Align icon with text */
+}
+
+
+/* Select2 Customization - Adjust as needed */
+.select2-container--default .select2-selection--multiple {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: right; /* For RTL text */
+}
+.select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: #aaa;
+    border-width: 1px;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #e4e4e4;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    padding: 0 5px;
+    margin-top: 5px;
+    margin-left: 5px; /* For RTL layout */
+    float: right; /* For RTL layout */
+    color: #333;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: #888;
+    cursor: pointer;
+    float: left; /* For RTL layout */
+    margin-left: 2px; /* For RTL layout */
+    margin-right: 5px;
+    font-weight: bold;
+}
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #555;
+}
+.select2-container--default .select2-search--inline .select2-search__field {
+    text-align: right; /* For RTL input */
+    direction: rtl; /* For RTL input */
+}
+button {
+	font-family: "Vazir"
+}

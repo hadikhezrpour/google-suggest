@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ابزار استخراج کلمات کلیدی</title>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>ابزار گوگل ساجست</h1>
+        <form id="keywordForm" class="search-form">
+            <div class="search-box">
+                <input type="text" id="seedKeyword" name="seedKeyword" placeholder="کلمه کلیدی">
+                <button type="button" class="search-button" onclick="startJob()">جستجو</button>
+            </div>
+            <button type="button" class="collapsible">تنظیمات اضافی</button>
+            <div class="collapse-content">
+                <div class="options">
+                    <label for="maxDepth">عمق جستجو:</label>
+                    <input type="number" id="maxDepth" name="maxDepth" value="2">
+                </div>
+                <label for="prefixesSelect">اضافه کردن پسوند و پیشوند:</label>
+                <select id="prefixesSelect" class="select2-multiple" multiple="multiple" style="width: 100%">
+                    <!-- Options will be added dynamically -->
+                </select>
+                <div class="checkboxes">
+                    <label><input type="checkbox" id="useAlphabet" name="useAlphabet"> استفاده از حروف الفبا</label>
+                    <label><input type="checkbox" id="useNumbers" name="useNumbers"> استفاده از اعداد</label>
+                </div>
+            </div>
+            <div class="textareas">
+                <textarea id="results" readonly placeholder="نتایج اینجا نمایش داده می‌شوند"></textarea>
+            </div>
+            <div class="options"> 
+                <button type="button" onclick="togglePause()">توقف/ادامه</button>
+                <button type="button" onclick="resetJob()">ریست</button>
+                <button type="button" onclick="downloadExcel()">دانلود اکسل</button>
+            </div>
+            <label id="keywordCount">تعداد کلمات کلیدی: 0</label>
+        </form>
+    </div>
+    <div class="container">
+        <div class="tables" id="tablesContainer">
+            <!-- جداول کلمات کلیدی اینجا اضافه می‌شوند -->
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+    let doWork = false;
+let paused = false;
+let keywordsToQuery = [];
+let hashMapResults = {};
+let queryKeywords = {};
+let totalKeywords = 0;
+let maxDepth = 2;
+let processingQueue = false;
+const persianAlphabet = 'اآبپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی'.split('');
+const prefixes = [
+    'خرید', 'فروش', 'قیمت', 'بهترین', 'مقایسه', 'از', 'با', 'در', 'به', 'برای', 'فرق', 
+    'اگر', 'آموزش', 'روش', 'کدام', 'چرا', 'چطور', 'فواید', 'معرفی', 'آموزش', 'دانلود', 
+    'چیست', 'درباره', 'لیست', 'روش'
+];
+const numbers = '123456789'.split('');
+
+document.addEventListener("DOMContentLoaded", function() {
+    $('#prefixesSelect').select2({
+        tags: true,
+        placeholder: "پسوندهای دستی را انتخاب یا اضافه کنید"
+    });
+
+    prefixes.forEach(prefix => {
+        const newOption = new Option(prefix, prefix, false, false);
+        $('#prefixesSelect').append(newOption).trigger('change');
+    });
+
+    const collapsible = document.querySelectorAll('.collapsible');
+    collapsible.forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.classList.toggle('active');
+            const content = this.nextElementSibling;
+            if (content.style.display === "block") {
+                content.style.display = "none";
+            } else {
+                content.style.display = "block";
+            }
+        });
+    });
+});
+
+function startJob() {
+    const seedKeyword = document.getElementById('seedKeyword').value;
+    maxDepth = parseInt(document.getElementById('maxDepth').value);
+    const useAlphabet = document.getElementById('useAlphabet').checked;
+    const useNumbers = document.getElementById('useNumbers').checked;
+    const manualKeywords = $('#prefixesSelect').val();
+
+    if (!seedKeyword) {
+        alert('لطفاً یک کلمه کلیدی وارد کنید');
+        return;
+    }
+
+    resetJob();
+
+    keywordsToQuery.push({ keyword: seedKeyword, depth: 0, parent: null });
+    hashMapResults[seedKeyword] = true;
+    doWork = true;
+
+    processKeywords(useAlphabet, useNumbers, manualKeywords);
+}
+
+function togglePause() {
+    paused = !paused;
+    if (!paused) {
+        processKeywords();
+    }
+}
+
+function resetJob() {
+    doWork = false;
+    paused = false;
+    keywordsToQuery = [];
+    hashMapResults = {};
+    queryKeywords = {};
+    totalKeywords = 0;
+    processingQueue = false;
+    document.getElementById('tablesContainer').innerHTML = '';
+    document.getElementById('results').value = '';
+    document.getElementById('keywordCount').innerText = 'تعداد کلمات کلیدی: 0';
+}
+
+function processKeywords(useAlphabet = false, useNumbers = false, manualKeywords = []) {
+    if (processingQueue || !doWork || paused || keywordsToQuery.length === 0) {
+        return;
+    }
+
+    processingQueue = true;
+
+    const { keyword, depth, parent } = keywordsToQuery.shift();
+    if (depth <= maxDepth) {
+        fetchKeywords(keyword, depth, parent, useAlphabet, useNumbers, manualKeywords);
+    } else {
+        processingQueue = false;
+        processKeywords(useAlphabet, useNumbers, manualKeywords);
+    }
+}
+
+function fetchKeywords(keyword, depth, parent, useAlphabet, useNumbers, manualKeywords) {
+    const callbackName = `jsonp_callback_${Math.round(100000 * Math.random())}`;
+    window[callbackName] = function(data) {
+        handleKeywordResponse(data, depth, keyword, useAlphabet, useNumbers, manualKeywords);
+        delete window[callbackName];
+        document.body.removeChild(script);
+        processingQueue = false;
+        processKeywords(useAlphabet, useNumbers, manualKeywords);
+    };
+
+    const url = `https://suggestqueries.google.com/complete/search?client=firefox&hl=fa&gl=IR&q=${keyword}&callback=${callbackName}`;
+    const script = document.createElement('script');
+    script.src = url;
+    script.onerror = function() {
+        console.error(`Error fetching keyword: ${keyword}`);
+        delete window[callbackName];
+        document.body.removeChild(script);
+        processingQueue = false;
+        processKeywords(useAlphabet, useNumbers, manualKeywords);
+    };
+    document.body.appendChild(script);
+}
+
+function handleKeywordResponse(data, depth, parentKeyword, useAlphabet, useNumbers, manualKeywords) {
+    const keywords = data[1];
+    if (keywords) {
+        if (!queryKeywords[parentKeyword]) {
+            queryKeywords[parentKeyword] = [];
+        }
+        const newChildren = [];
+        for (const kw of keywords) {
+            if (!hashMapResults[kw]) {
+                hashMapResults[kw] = true;
+                keywordsToQuery.push({ keyword: kw, depth: depth + 1, parent: parentKeyword });
+                queryKeywords[parentKeyword].push(kw);
+                totalKeywords += 1;
+                newChildren.push(kw);
+                if (kw.length <= 15 && depth < maxDepth) {
+                    extendKeywords(kw, depth, useAlphabet, useNumbers, manualKeywords);
+                }
+            }
+        }
+        if (newChildren.length) {
+            updateUI(parentKeyword, newChildren);
+        }
+    }
+}
+
+function extendKeywords(keyword, depth, useAlphabet, useNumbers, manualKeywords) {
+    if (useAlphabet) {
+        for (const char of persianAlphabet) {
+            const extendedKeyword = `${keyword} ${char}`;
+            if (!hashMapResults[extendedKeyword]) {
+                hashMapResults[extendedKeyword] = true;
+                keywordsToQuery.push({ keyword: extendedKeyword, depth: depth + 1, parent: keyword });
+            }
+        }
+    }
+    if (useNumbers) {
+        for (const num of numbers) {
+            const extendedKeyword = `${keyword} ${num}`;
+            if (!hashMapResults[extendedKeyword]) {
+                hashMapResults[extendedKeyword] = true;
+                keywordsToQuery.push({ keyword: extendedKeyword, depth: depth + 1, parent: keyword });
+            }
+        }
+    }
+    for (const prefix of manualKeywords) {
+        const prefixedKeyword = `${prefix} ${keyword}`;
+        if (!hashMapResults[prefixedKeyword]) {
+            hashMapResults[prefixedKeyword] = true;
+            keywordsToQuery.push({ keyword: prefixedKeyword, depth: depth + 1, parent: keyword });
+        }
+        const suffixedKeyword = `${keyword} ${prefix}`;
+        if (!hashMapResults[suffixedKeyword]) {
+            hashMapResults[suffixedKeyword] = true;
+            keywordsToQuery.push({ keyword: suffixedKeyword, depth: depth + 1, parent: keyword });
+        }
+    }
+}
+
+function updateUI(parent, children) {
+    let tableContainer = document.getElementById(`container-${parent}`);
+    let resultsTextarea = document.getElementById('results');
+    if (!tableContainer) {
+        const tablesContainer = document.getElementById('tablesContainer');
+        tableContainer = document.createElement('div');
+        tableContainer.id = `container-${parent}`;
+        tableContainer.className = 'table-container';
+        tableContainer.innerHTML = `
+            <div class="table-header">
+                <h3>${parent}</h3>
+                <button onclick="copyTable('${parent}')">کپی جدول</button>
+            </div>
+            <table id="table-${parent}">
+                <tbody>
+                </tbody>
+            </table>
+        `;
+        tablesContainer.appendChild(tableContainer);
+        resultsTextarea.value += `${parent}:\n`;
+    }
+    const tbody = tableContainer.querySelector('tbody');
+    for (const child of children) {
+        const searchUrl = `https://www.google.com/search?q=intitle:%22${encodeURIComponent(child).replace(/%20/g, '+')}%22`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${child} <a href="${searchUrl}" target="_blank"><img src="static/search-svgrepo-com.svg" alt="Search" style="width: 16px; height: 16px; margin-right:10px;"/></a></td>
+        `;
+        tbody.appendChild(tr);
+        resultsTextarea.value += `  - ${child}\n`;
+    }
+    document.getElementById('keywordCount').innerText = `تعداد کلمات کلیدی: ${totalKeywords}`;
+}
+
+function copyTable(parent) {
+    const tableContainer = document.getElementById(`container-${parent}`);
+    const table = tableContainer.querySelector('table');
+    let copyText = `${parent}:\n`;
+    const rows = table.querySelectorAll('tbody tr');
+    for (const row of rows) {
+        const cells = row.querySelectorAll('td');
+        copyText += `  - ${cells[0].innerText}\n`;
+    }
+    navigator.clipboard.writeText(copyText).then(() => {
+        alert('جدول کپی شد');
+    });
+}
+
+function downloadExcel() {
+    const data = [];
+    for (const [parent, children] of Object.entries(queryKeywords)) {
+        for (const child of children) {
+            data.push([parent, child]);
+        }
+    }
+
+    let csvContent = '\uFEFF' + 'Parent Keyword,Keyword\n'; // Add UTF-8 BOM and headers
+    csvContent += data.map(e => e.join(',')).join('\n');
+
+    const encodedUri = encodeURI('data:text/csv;charset=utf-8,' + csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'keywords.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+</body>
+</html>
