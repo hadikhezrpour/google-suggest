@@ -72,9 +72,6 @@ This tool is a Python Flask-based web application designed to help you extract k
 
 You are welcome to improve this project by providing suggestions and contributing to the codebase.
 
-## License
-
-[Specify MIT License or any other desired license here]
 
 ---
 
